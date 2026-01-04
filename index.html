@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>Pack & Go — Global Edition</title>
+    <meta name="theme-color" content="#E2136E" />
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (UMD for local usage) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel Standalone (To compile JSX/TS in browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bkash: #E2136E;
+            --bkash-dark: #B60F58;
+            --ring: #ffe4f2;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Neutral background for desktop view */
+            overscroll-behavior: none;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for mobile */
+            overflow: hidden;
+        }
+        .font-retro {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes shake {
+            25% { transform: translateX(-2px); }
+            50% { transform: translateX(2px); }
+            75% { transform: translateX(-1px); }
+        }
+        .animate-shake {
+            animation: shake 0.22s linear;
+        }
+        @keyframes pulse-custom {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .animate-pulse-custom {
+            animation: pulse-custom 0.25s ease;
+        }
+        
+        /* New Animations */
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-slide-up {
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react,typescript">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+// --- FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDqICTut_lIQB7_7plEhBY8BakvBeb-JC4",
+  authDomain: "packandgo-ea429.firebaseapp.com",
+  databaseURL: "https://packandgo-ea429-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "packandgo-ea429",
+  storageBucket: "packandgo-ea429.firebasestorage.app",
+  messagingSenderId: "283297622018",
+  appId: "1:283297622018:web:ff729b3a09f69397845f1b"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+        // --- ICONS (Lucide Replacements for standalone usage) ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {path}
+            </svg>
+        );
+
+        const RefreshCcw = (props) => <Icon {...props} path={<><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>} />;
+        const Award = (props) => <Icon {...props} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>} />;
+        const Home = (props) => <Icon {...props} path={<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>} />;
+        const Play = (props) => <Icon {...props} path={<polygon points="5 3 19 12 5 21 5 3"/>} />;
+        const Settings = (props) => <Icon {...props} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />;
+        const Maximize = (props) => <Icon {...props} path={<><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></>} />;
+        const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+        const Trash2 = (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />;
+
+
+        // --- SERVICES ---
+
+        class AudioService {
+            constructor() {
+                this.ctx = null;
+                this.unlocked = false;
+            }
+
+            ac() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                return this.ctx;
+            }
+
+            unlock() {
+                if (this.unlocked) return;
+                const c = this.ac();
+                if (c.state === 'suspended') {
+                    c.resume();
+                }
+                const o = c.createOscillator();
+                const g = c.createGain();
+                g.gain.value = 0;
+                o.connect(g).connect(c.destination);
+                o.start(0);
+                o.stop(c.currentTime + 0.01);
+                this.unlocked = true;
+            }
+
+            beep(freq, dur, type, gainVal = 0.06) {
+                try {
+                    const c = this.ac();
+                    const o = c.createOscillator();
+                    const g = c.createGain();
+                    o.type = type;
+                    o.frequency.value = freq;
+                    g.gain.value = gainVal;
+                    o.connect(g).connect(c.destination);
+                    const t = c.currentTime;
+                    o.start(t);
+                    o.stop(t + dur);
+                } catch (e) {
+                    console.warn("Audio play failed", e);
+                }
+            }
+
+            correct() { this.beep(980, 0.09, 'square'); }
+            wrong() { this.beep(220, 0.12, 'sawtooth', 0.08); }
+            click() { this.beep(520, 0.05, 'square'); }
+            timesUp() {
+                this.beep(180, 0.08, 'sine', 0.07);
+                setTimeout(() => this.beep(140, 0.1, 'sine', 0.07), 90);
+            }
+            finish() {
+                [523, 659, 784].forEach((f, i) => 
+                setTimeout(() => this.beep(f, 0.12, 'triangle', 0.05), i * 80)
+                );
+            }
+        }
+        const audio = new AudioService();
+
+        const LB_KEY = 'packngo_global_lb_v1';
+        const STATS_KEY = 'packngo_global_stats_v1';
+        
+        const LeaderboardService = {
+    // This allows the UI to "listen" for real-time updates
+    subscribeToLeaderboard: (callback) => {
+        const scoresRef = database.ref('leaderboard').orderByChild('timeMs').limitToFirst(100);
+        scoresRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            const scores = data ? Object.values(data).sort((a, b) => a.timeMs - b.timeMs) : [];
+            callback(scores);
+        });
+        return () => scoresRef.off(); // Cleanup function
+    },
+
+    submitScore: async (entry) => {
+        // Pushes a new score to the 'leaderboard' node in Firebase
+        const newScoreRef = database.ref('leaderboard').push();
+        await newScoreRef.set(entry);
+    },
+
+    // Keeping local stats for the individual player
+    getStats: () => {
+        const data = localStorage.getItem('packngo_global_stats_v1');
+        return data ? JSON.parse(data) : { lifetimeWins: 0, totalGamesPlayed: 0 };
+    },
+
+    incrementStats: (won) => {
+        const stats = LeaderboardService.getStats();
+        stats.totalGamesPlayed += 1;
+        if (won) stats.lifetimeWins += 1;
+        localStorage.setItem('packngo_global_stats_v1', JSON.stringify(stats));
+    },
+
+    resetAll: async () => {
+        if(confirm("This will wipe the GLOBAL leaderboard for everyone. Continue?")) {
+            await database.ref('leaderboard').remove();
+        }
+    }
+};
+        // --- ASSETS & CONSTANTS ---
+
+        const IconWrap = ({ children }) => (
+            <svg viewBox="0 0 64 64" width="100%" height="100%" className="w-12 h-12" xmlns="http://www.w3.org/2000/svg">
+                {children}
+            </svg>
+        );
+
+        const Scenes = {
+            beach: (
+                <svg className="w-full h-full object-cover" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="skyb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#bfefff"/><stop offset="100%" stopColor="#eafcff"/></linearGradient>
+                    <linearGradient id="sand" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ffe3ad"/><stop offset="100%" stopColor="#ffd189"/></linearGradient>
+                </defs>
+                <rect width="320" height="120" fill="url(#skyb)"/>
+                <circle cx="260" cy="24" r="12" fill="#ffd56a" opacity=".9"/>
+                <path d="M0 86 Q80 80 160 86 T320 86 V120 H0 Z" fill="#a7e9ff" opacity=".7"/>
+                <path d="M0 92 Q80 86 160 92 T320 92 V120 H0 Z" fill="#93ddff" opacity=".9"/>
+                <path d="M0 102 Q80 98 160 102 T320 102 V120 H0 Z" fill="url(#sand)"/>
+                <g opacity=".9">
+                    <rect x="76" y="60" width="2" height="30" fill="#a16207"/>
+                    <path d="M60 60 l20 -25 l20 25 z" fill="#f59e0b"/>
+                </g>
+                </svg>
+            ),
+            tea: (
+                <svg className="w-full h-full object-cover" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="skyt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d4ffe9"/><stop offset="100%" stopColor="#f0fffb"/></linearGradient>
+                </defs>
+                <rect width="320" height="120" fill="url(#skyt)"/>
+                <path d="M0 96 Q60 74 120 96 T240 96 T320 96 V120 H0 Z" fill="#86efac"/>
+                <path d="M-20 110 Q40 88 100 110 T220 110 T340 110 V120 H-20 Z" fill="#22c55e" opacity=".6"/>
+                <g stroke="#10b981" strokeLinecap="round"><line x1="36" y1="20" x2="46" y2="30"/><line x1="60" y1="22" x2="70" y2="32"/><line x1="84" y1="20" x2="94" y2="30"/></g>
+                </svg>
+            ),
+            hills: (
+                <svg className="w-full h-full object-cover" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+                <rect width="320" height="120" fill="#eef2ff"/>
+                <path d="M0 110 L45 68 L85 96 L130 54 L175 84 L220 62 L260 90 L320 112 V120 H0 Z" fill="#a5b4fc"/>
+                <g fill="#6366f1" opacity=".9"><circle cx="42" cy="26" r="2"/><circle cx="62" cy="22" r="1.7"/><circle cx="84" cy="28" r="1.3"/></g>
+                </svg>
+            ),
+            haor: (
+                <svg className="w-full h-full object-cover" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="skyh" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c7f3ff"/><stop offset="100%" stopColor="#eaffff"/></linearGradient>
+                </defs>
+                <rect width="320" height="120" fill="url(#skyh)"/>
+                <path d="M0 92 Q60 86 120 92 T240 92 T320 92 V120 H0 Z" fill="#b3eaff"/>
+                <g><path d="M120 90 l22 -10 28 10 z" fill="#7c3aed" opacity=".85"/><rect x="148" y="72" width="2" height="12" fill="#7c3aed"/><path d="M150 72 l10 6 l-10 6 z" fill="#E2136E" opacity=".9"/></g>
+                <g fill="#22c55e" opacity=".8"><circle cx="36" cy="106" r="3"/><circle cx="44" cy="104" r="2"/><circle cx="52" cy="106" r="3"/></g>
+                </svg>
+            )
+        };
+
+        const Icons = {
+            wallet: (
+                <div className="w-12 h-12 flex items-center justify-center p-1">
+                  <img src="./assets/wallet-ui.png" alt="Wallet" className="w-full h-full object-contain drop-shadow-sm filter brightness-110 contrast-125" />
+                </div>
+            ),
+            sunscreen: (<IconWrap><rect x="18" y="10" rx="6" ry="6" width="28" height="44" fill="#FFB020" stroke="#CC8A18" strokeWidth="2"/><circle cx="32" cy="32" r="6" fill="#fff"/><path d="M22 18h20" stroke="#fff" strokeWidth="3"/></IconWrap>),
+            sunglasses: (<IconWrap><rect x="10" y="26" width="18" height="12" rx="6" fill="#111"/><rect x="36" y="26" width="18" height="12" rx="6" fill="#111"/><rect x="28" y="28" width="8" height="4" fill="#444"/><path d="M10 26h18M36 26h18" stroke="#6b7280" strokeWidth="3"/></IconWrap>),
+            shorts: (<IconWrap><path d="M12 14h40l-6 22H34l-2-4-2 4H18L12 14z" fill="#60A5FA" stroke="#2563EB" strokeWidth="2"/></IconWrap>),
+            sandals: (<IconWrap><path d="M8 36c10-8 28-8 48 0v6H8v-6z" fill="#F59E0B" stroke="#B45309" strokeWidth="2"/></IconWrap>),
+            raincoat: (<IconWrap><path d="M20 10h24l10 18v24H10V28l10-18z" fill="#34D399" stroke="#059669" strokeWidth="2"/></IconWrap>),
+            umbrella: (<IconWrap><path d="M32 10a22 22 0 0122 32H10A22 22 0 0132 10z" fill="#60A5FA" stroke="#2563EB" strokeWidth="2"/><path d="M32 32v16a6 6 0 0012 0" stroke="#1F2937" strokeWidth="3"/></IconWrap>),
+            walkshoes: (<IconWrap><path d="M8 38l12-8 10 8 18 2v8H8v-10z" fill="#9CA3AF" stroke="#4B5563" strokeWidth="2"/></IconWrap>),
+            repellent: (<IconWrap><rect x="22" y="12" width="20" height="40" rx="6" fill="#FCA5A5" stroke="#DC2626" strokeWidth="2"/><rect x="26" y="18" width="12" height="14" fill="#fff"/><circle cx="32" cy="40" r="3" fill="#DC2626"/></IconWrap>),
+            camera: (<IconWrap><rect x="8" y="18" width="48" height="30" rx="6" fill="#111827"/><circle cx="32" cy="33" r="10" fill="#1F2937" stroke="#93C5FD" strokeWidth="3"/><rect x="20" y="14" width="12" height="8" rx="3" fill="#6B7280"/></IconWrap>),
+            hikeboots: (<IconWrap><path d="M10 36h22l10 8h12v8H10v-16z" fill="#F59E0B" stroke="#B45309" strokeWidth="2"/></IconWrap>),
+            backpack: (<IconWrap><rect x="16" y="12" width="32" height="40" rx="10" fill="#A78BFA" stroke="#7C3AED" strokeWidth="2"/><rect x="20" y="24" width="24" height="14" rx="6" fill="#DDD6FE"/></IconWrap>),
+            jacket: (<IconWrap><path d="M20 10h24l10 18v26H10V28l10-18z" fill="#60A5FA" stroke="#2563EB" strokeWidth="2"/></IconWrap>),
+            flashlight: (<IconWrap><path d="M18 10h28l-8 10v22l-12 12V20L18 10z" fill="#FCD34D" stroke="#F59E0B" strokeWidth="2"/></IconWrap>),
+            firstaid: (<IconWrap><rect x="8" y="18" width="48" height="30" rx="8" fill="#FCA5A5" stroke="#DC2626" strokeWidth="2"/><path d="M32 22v22M21 33h22" stroke="#fff" strokeWidth="6"/></IconWrap>),
+            hat: (<IconWrap><ellipse cx="32" cy="44" rx="22" ry="8" fill="#FDE68A" stroke="#D97706" strokeWidth="2"/><rect x="22" y="22" width="20" height="16" rx="6" fill="#F59E0B"/></IconWrap>),
+            towel: (<IconWrap><rect x="18" y="12" width="28" height="40" rx="6" fill="#93C5FD" stroke="#3B82F6" strokeWidth="2"/><path d="M22 18h20M22 28h20M22 38h20" stroke="#fff" strokeWidth="3"/></IconWrap>),
+            map: (<IconWrap><path d="M8 16l16-6 16 6 16-6v36l-16 6-16-6-16 6V16z" fill="#BBF7D0" stroke="#059669" strokeWidth="2"/></IconWrap>),
+            powerbank: (<IconWrap><rect x="18" y="10" width="28" height="44" rx="10" fill="#E9D5FF" stroke="#7C3AED" strokeWidth="2"/><path d="M32 18l-6 12h12l-6 12" stroke="#7C3AED" strokeWidth="3"/></IconWrap>),
+            lifejacket: (<IconWrap><path d="M18 10h28l8 14v28H10V24l8-14z" fill="#fb923c" stroke="#ea580c" strokeWidth="2"/><path d="M28 10v44M36 10v44" stroke="#fff" strokeWidth="3" opacity=".8"/></IconWrap>),
+            drybag: (<IconWrap><path d="M18 14h28l4 8v30H14V22l4-8z" fill="#22d3ee" stroke="#0891b2" strokeWidth="2"/><rect x="22" y="18" width="20" height="6" rx="2" fill="#0ea5e9"/></IconWrap>),
+            watershoes: (<IconWrap><path d="M8 40c10-8 22-8 40 0l8 2v8H8v-10z" fill="#38bdf8" stroke="#0369a1" strokeWidth="2"/></IconWrap>),
+            water: (<IconWrap><rect x="24" y="10" width="16" height="30" rx="6" fill="#93c5fd" stroke="#3b82f6" strokeWidth="2"/><rect x="26" y="12" width="12" height="8" rx="2" fill="#60a5fa"/><rect x="26" y="40" width="12" height="12" rx="3" fill="#1d4ed8"/><circle cx="32" cy="34" r="3" fill="#eff6ff"/></IconWrap>)
+        };
+
+        const ALL_ITEMS = [
+            {id:'wallet', label:'Wallet', icon:'wallet'},
+            {id:'sunscreen', label:'Sunscreen', icon:'sunscreen'},
+            {id:'sunglasses', label:'Sunglasses', icon:'sunglasses'},
+            {id:'shorts', label:'Shorts', icon:'shorts'},
+            {id:'sandals', label:'Sandals', icon:'sandals'},
+            {id:'raincoat', label:'Raincoat', icon:'raincoat'},
+            {id:'umbrella', label:'Umbrella', icon:'umbrella'},
+            {id:'walkshoes', label:'Walking Shoes', icon:'walkshoes'},
+            {id:'repellent', label:'Mosquito Cream', icon:'repellent'},
+            {id:'camera', label:'Camera', icon:'camera'},
+            {id:'hikeboots', label:'Hiking Boots', icon:'hikeboots'},
+            {id:'backpack', label:'Backpack', icon:'backpack'},
+            {id:'jacket', label:'Warm Jacket', icon:'jacket'},
+            {id:'flashlight', label:'Flashlight', icon:'flashlight'},
+            {id:'firstaid', label:'First Aid', icon:'firstaid'},
+            {id:'hat', label:'Sun Hat', icon:'hat'},
+            {id:'towel', label:'Beach Towel', icon:'towel'},
+            {id:'map', label:'Map', icon:'map'},
+            {id:'powerbank', label:'Power Bank', icon:'powerbank'},
+            {id:'lifejacket', label:'Life Jacket', icon:'lifejacket'},
+            {id:'drybag', label:'Dry Bag', icon:'drybag'},
+            {id:'watershoes', label:'Water Shoes', icon:'watershoes'},
+            {id:'water', label:'Water Bottle', icon:'water'}
+        ];
+
+        const DESTINATIONS = [
+            { 
+                id:'beach', 
+                name:'Beach — Cox’s Bazar', 
+                blurb:'Sun, surf, and sandy toes. Pack light & sun-safe!', 
+                pool:['sunscreen','sunglasses','shorts','sandals','towel','hat','water'],
+                tone: { win:`Beach mode: packed and ready to splash!`, lose:`The tide won this round — repack for the waves!` }
+            },
+            { 
+                id:'tea', 
+                name:'Tea Estates — Sylhet', 
+                blurb:'Lush greenery & drizzle. Think rain-ready & comfy.', 
+                pool:['raincoat','umbrella','walkshoes','repellent','camera','water','hat'],
+                tone: { win:`Mist & green waves — you packed like a pro.`, lose:`Oops — drizzle caught you. Try a rain-ready pack!` }
+            },
+            { 
+                id:'hills', 
+                name:'Hills — Bandarban', 
+                blurb:'Trails & cool nights. Go sturdy & outdoorsy.', 
+                pool:['hikeboots','backpack','jacket','flashlight','firstaid','map','powerbank','water'],
+                tone: { win:`Trail-ready! Hills can’t stop you.`, lose:`The hills were steep today — repack sturdier!` }
+            },
+            { 
+                id:'haor', 
+                name:'Haor — Sunamganj', 
+                blurb:'Open waters & boat rides. Stay dry, stay safe.', 
+                pool:['raincoat','lifejacket','drybag','watershoes','camera','water','hat'],
+                tone: { win:`All aboard — haor-safe & splash-ready!`, lose:`Boat’s leaving — pack dry & safe next time!` }
+            }
+        ];
+
+        // --- COMPONENTS ---
+
+        const LandingView = ({ onPlay, leaderboardVisible, leaderboardData }) => {
+            const toggleFullScreen = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch((e) => console.log(e));
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            };
+
+            return (
+                <div className="relative w-full h-full flex flex-col items-center overflow-hidden">
+                    {/* Background Layer */}
+                    <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: "url('./assets/background.png')", backgroundColor: '#FFD400' }} />
+                    <div className="absolute inset-0 z-0 bg-black/10" />
+
+                    {/* Fullscreen Toggle */}
+                    <button onClick={toggleFullScreen} className="absolute top-4 right-4 p-2.5 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors z-50 backdrop-blur-sm" title="Toggle Fullscreen">
+                        <Maximize size={24} />
+                    </button>
+
+                    {/* MAIN CONTENT CONTAINER */}
+                    <div className="relative z-10 w-full h-full flex flex-col">
+                        
+                        {/* 1. TOP SPACER: This forces the content to start at 55% of the screen height */}
+                        <div className="w-full min-h-[55vh] flex-1"></div>
+
+                        {/* 2. INTERACTIVE AREA: Play Button + Leaderboard */}
+                        {/* gap-6 ensures they always stay the same distance apart */}
+                        <div className="w-full flex flex-col items-center gap-6 px-4 pb-12 justify-start shrink-0">
+                            
+                            <button 
+                                onClick={onPlay} 
+                                className="px-16 py-6 bg-[#FFD400] text-black border-[5px] border-black rounded-lg shadow-[0_6px_0_#9A7A00] hover:translate-y-[-2px] active:translate-y-[2px] active:shadow-[0_2px_0_#9A7A00] transition-all font-retro text-2xl uppercase tracking-wider w-full max-w-xs shrink-0"
+                            >
+                                Play
+                            </button>
+
+                            {leaderboardVisible && (
+                                <div className="w-full max-w-sm bg-white/95 rounded-xl shadow-xl overflow-hidden animate-pulse-custom shrink-0">
+                                    <h4 className="text-center font-bold text-[#B60F58] bg-[#ffe4f2] py-2 text-sm uppercase tracking-wider">🏆 Global Leaderboard</h4>
+                                    <div className="overflow-y-auto max-h-48 text-sm p-3">
+                                        {leaderboardData.length === 0 ? (
+                                            <p className="text-center text-gray-500 py-4">No winners yet. Be the first!</p>
+                                        ) : (
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="text-gray-500 text-[10px] uppercase border-b border-gray-100">
+                                                        <th className="pb-1 pl-1">Rank</th>
+                                                        <th className="pb-1">Name</th>
+                                                        <th className="pb-1">Date</th>
+                                                        <th className="pb-1 text-right pr-1">Time</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {leaderboardData.slice(0, 10).map((e, i) => (
+                                                        <tr key={i} className="border-b border-gray-50 last:border-0 text-xs">
+                                                            <td className="py-2 pl-1 font-bold text-gray-700">
+                                                                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                                                            </td>
+                                                            <td className="py-2 text-gray-900 font-bold truncate max-w-[80px]">{e.name}</td>
+                                                            <td className="py-2 text-gray-500 text-[10px]">
+                                                                {e.timestamp ? new Date(e.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                                            </td>
+                                                            <td className="py-2 pr-1 text-right font-mono text-gray-600">
+                                                                {(e.timeMs / 1000).toFixed(2)}s
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const IntroView = ({ playerName, onSelect, onBack }) => {
+            return (
+                <div className="flex flex-col h-full bg-gray-50">
+                <div className="p-4 pt-8 pb-2 shrink-0">
+                    <button onClick={onBack} className="text-gray-500 hover:text-gray-900 flex items-center gap-1 mb-4 font-bold text-sm">
+                    <Home size={16} /> Back
+                    </button>
+                    <h2 className="text-3xl font-black text-[#12131A] mb-1">Hi, {playerName}! <span className="text-2xl">👋</span></h2>
+                    <p className="text-gray-500 text-sm font-medium">Where are we packing for today?</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 pt-0 space-y-4 pb-8 no-scrollbar">
+                    {DESTINATIONS.map(dest => (
+                    <button 
+                        key={dest.id}
+                        onClick={() => onSelect(dest.id)}
+                        className="w-full bg-white rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group text-left border border-gray-100 relative"
+                    >
+                        <div className="h-28 w-full bg-gray-100 relative overflow-hidden">
+                        <div className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700">
+                            {Scenes[dest.id]}
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute bottom-3 left-4 right-4">
+                            <h3 className="text-white font-black text-xl tracking-tight leading-none mb-0.5 shadow-black drop-shadow-lg">{dest.name}</h3>
+                        </div>
+                        </div>
+                        <div className="p-4 bg-white relative z-10">
+                        <p className="text-gray-600 text-xs font-bold leading-relaxed">{dest.blurb}</p>
+                        <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-[#E2136E] uppercase tracking-wider">
+                            <span>Start Packing</span>
+                            <div className="w-4 h-0.5 bg-[#E2136E] group-hover:w-8 transition-all" />
+                        </div>
+                        </div>
+                    </button>
+                    ))}
+                </div>
+                </div>
+            );
+        };
+
+        const GameView = ({ playerName, destination, settings, onExit, onFinish }) => {
+            const [gameState, setGameState] = useState('brief');
+            const [packedItems, setPackedItems] = useState(new Set());
+            const [neededItems, setNeededItems] = useState(new Set());
+            const [availableItems, setAvailableItems] = useState([]);
+            const [wrongs, setWrongs] = useState(0);
+            const [timer, setTimer] = useState(settings.gameDuration);
+            const [startTime, setStartTime] = useState(0);
+            const [finalTimeMs, setFinalTimeMs] = useState(0);
+            const [success, setSuccess] = useState(false);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [nextAction, setNextAction] = useState(null);
+            
+            useEffect(() => {
+                const requiredCount = Math.max(0, settings.itemsToPack - 1);
+                const poolIds = [...destination.pool];
+                const shuffledPool = poolIds.sort(() => Math.random() - 0.5);
+                const selectedPoolIds = shuffledPool.slice(0, requiredCount);
+                const neededIds = ['wallet', ...selectedPoolIds];
+                const neededSet = new Set(neededIds);
+                setNeededItems(neededSet);
+
+                const totalTraySize = settings.itemsToPack >= 7 ? 20 : 15;
+                const distractorCandidates = ALL_ITEMS.filter(i => !neededSet.has(i.id));
+                const shuffledCandidates = distractorCandidates.sort(() => Math.random() - 0.5);
+                const numberOfDistractorsNeeded = Math.max(0, totalTraySize - neededIds.length);
+                const selectedDistractors = shuffledCandidates.slice(0, numberOfDistractorsNeeded);
+                const finalTrayIds = [...neededIds, ...selectedDistractors.map(d => d.id)];
+                const finalTrayItems = finalTrayIds
+                    .map(id => ALL_ITEMS.find(i => i.id === id))
+                    .filter((i) => !!i)
+                    .sort(() => Math.random() - 0.5);
+                
+                setAvailableItems(finalTrayItems);
+            }, [destination, settings.itemsToPack]);
+
+            useEffect(() => {
+                let interval;
+                if (gameState === 'playing') {
+                interval = setInterval(() => {
+                    const now = Date.now();
+                    const elapsed = (now - startTime) / 1000;
+                    const remaining = Math.max(0, settings.gameDuration - elapsed); 
+                    setTimer(remaining);
+                    if (remaining <= 0) {
+                    handleFinish(false, true);
+                    }
+                }, 100);
+                }
+                return () => clearInterval(interval);
+            }, [gameState, startTime, settings.gameDuration]);
+
+            const startGame = () => {
+                audio.click();
+                setStartTime(Date.now());
+                setGameState('playing');
+            };
+
+            const handlePack = (itemId) => {
+                if (packedItems.has(itemId) || gameState !== 'playing') return;
+                if (neededItems.has(itemId)) {
+                audio.correct();
+                const newPacked = new Set(packedItems).add(itemId);
+                setPackedItems(newPacked);
+                const neededArray = Array.from(neededItems);
+                const allPacked = neededArray.every(id => newPacked.has(id));
+                if (allPacked) handleFinish(true, false);
+                } else {
+                audio.wrong();
+                const newWrongs = wrongs + 1;
+                setWrongs(newWrongs);
+                if (newWrongs >= settings.maxWrongPicks) handleFinish(false, false);
+                }
+            };
+
+            const handleFinish = async (isWin, timeOut) => {
+                setSuccess(isWin);
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                setFinalTimeMs(duration);
+                setGameState('finished');
+                if (isWin) audio.finish(); else audio.timesUp();
+                LeaderboardService.incrementStats(isWin);
+                if (isWin) {
+                setIsSubmitting(true);
+                const genId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+                const entry = {
+                    id: genId,
+                    name: playerName,
+                    destId: destination.id,
+                    timeMs: duration,
+                    timestamp: new Date().toISOString()
+                };
+                await LeaderboardService.submitScore(entry);
+                onFinish();
+                setIsSubmitting(false);
+                } else {
+                    onFinish();
+                }
+            };
+
+            const handlePromoTransition = (action) => {
+                if (!settings.showPromo) {
+                    action();
+                    return;
+                }
+                setNextAction(() => action);
+                setGameState('promo');
+            };
+
+            const formattedTimer = timer.toFixed(2).replace('.', ':');
+            const isLargeTray = availableItems.length > 15;
+            const gridRowsClass = isLargeTray ? 'grid-rows-5' : 'grid-rows-4';
+
+            return (
+                <div className="flex flex-col h-full bg-[#f8fafc] relative">
+                <div className="bg-white p-3 shadow-sm flex items-end justify-between border-b border-gray-100 z-10 shrink-0">
+                    <div className="flex gap-4 text-sm font-bold">
+                        <div className="bg-white border-2 border-[#ffe4f2] px-3 py-1.5 rounded-xl shadow-sm">
+                        <span className="block text-[10px] text-[#B60F58] uppercase tracking-wider">Timer</span>
+                        <span className="text-xl font-mono">{formattedTimer}</span>
+                        </div>
+                        <div className="bg-white border-2 border-[#ffe4f2] px-3 py-1.5 rounded-xl shadow-sm">
+                        <span className="block text-[10px] text-[#B60F58] uppercase tracking-wider">Packed</span>
+                        <span className="text-xl">{packedItems.size} / {neededItems.size}</span>
+                        </div>
+                    </div>
+                    <button onClick={() => setAvailableItems(items => [...items].sort(() => Math.random() - 0.5))} className="p-2 bg-gray-100 rounded-lg text-gray-500 hover:bg-gray-200">
+                    <RefreshCcw size={18}/>
+                    </button>
+                </div>
+
+                <div className="flex-1 flex flex-col p-3 overflow-hidden">
+                    <div className="flex-1 mb-2 overflow-hidden flex flex-col min-h-0">
+                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 shrink-0 text-center">Tap items to pack</h3>
+                        <div className={`grid grid-cols-4 ${gridRowsClass} gap-2 h-full`}>
+                            {availableItems.map(item => {
+                                const isPacked = packedItems.has(item.id);
+                                return (
+                                    <button 
+                                        key={item.id}
+                                        disabled={isPacked}
+                                        onClick={() => handlePack(item.id)}
+                                        className={`relative flex flex-col items-center justify-center p-1 rounded-xl border-2 transition-all duration-100 w-full h-full shadow-sm ${isPacked ? 'opacity-0 pointer-events-none' : 'bg-white border-gray-100 hover:border-pink-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95'}`}
+                                    >
+                                    <div className="h-1/2 flex items-end justify-center pb-1 w-full shrink-0 pointer-events-none opacity-90">
+                                        <div className="w-8 h-8 object-contain flex items-center justify-center">
+                                            {Icons[item.icon]}
+                                        </div>
+                                    </div>
+                                    <div className="h-1/2 flex items-start justify-center pt-1 w-full">
+                                        <span className="text-[9px] font-bold text-center leading-tight text-gray-600 pointer-events-none w-full line-clamp-2 px-1">{item.label}</span>
+                                    </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                   <div className="shrink-0 relative mt-auto">
+    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Your Suitcase</h3>
+    {/* CHANGED: min-h-[180px] -> h-[22vh] min-h-[140px] max-h-[220px] (Responsive height) */}
+    <div className={`relative h-[22vh] min-h-[140px] max-h-[220px] bg-gradient-to-br from-[#c19a6b] via-[#a67c52] to-[#8b6f47] rounded-xl border-[6px] border-[#6b5d4f] shadow-xl p-4 transition-transform duration-200 flex flex-col ${gameState === 'playing' ? 'animate-none' : ''}`}>
+        <div className="absolute inset-[6px] border-2 border-[#d4af77]/30 rounded-lg pointer-events-none" />
+
+<div className="absolute top-[-18px] left-1/2 -translate-x-1/2 w-32 h-6 bg-gradient-to-b from-[#8b6f47] to-[#6b5d4f] border-[3px] border-[#5a4a3a] border-b-0 rounded-t-2xl" />
+{/* CHANGED: max-h-[140px] -> h-full (Fills the flexible parent container) */}
+<div className="relative z-10 grid grid-cols-2 gap-2 pt-6 content-start w-full overflow-y-auto h-full pr-1 no-scrollbar">
+                                {Array.from(packedItems).map(id => {
+                                    const item = ALL_ITEMS.find(i => i.id === id);
+                                    const isCorrect = neededItems.has(id);
+                                    return (
+                                        <div key={id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border shadow-sm w-full ${isCorrect ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200 animate-shake'}`}>
+                                            <div className="w-5 h-5 shrink-0 flex items-center justify-center">{Icons[item?.icon || '']}</div>
+                                            <span className="text-[10px] font-bold truncate leading-tight flex-1">{item?.label}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {gameState === 'brief' && (
+                    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-slide-up">
+                        <h3 className="text-xl font-black text-gray-800 mb-2">Trip Briefing</h3>
+                        <div className="text-gray-600 mb-4 font-medium text-sm">
+                        <strong className="block text-gray-900 mb-1">{destination.name}</strong>
+                        {destination.blurb}
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Memorize these {neededItems.size} items:</p>
+                        <div className="grid grid-cols-5 gap-2 mb-6">
+                        {Array.from(neededItems).map((id, index) => {
+                            const item = ALL_ITEMS.find(i => i.id === id);
+                            return (
+                                <div key={id} className="flex flex-col items-center justify-center p-1 bg-white border border-gray-200 rounded-xl h-24 w-full shadow-sm gap-1 animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+                                    <div className="w-8 h-8 flex items-center justify-center text-gray-800 opacity-90">
+                                        {Icons[item?.icon || '']}
+                                    </div>
+                                    <span className="text-[9px] text-center font-bold text-gray-600 leading-tight px-1 line-clamp-2">{item?.label}</span>
+                                </div>
+                            )
+                        })}
+                        </div>
+                        <div className="bg-pink-50 border-2 border-pink-200 p-3 rounded-xl text-xs font-bold text-pink-800 mb-6 leading-relaxed delay-200 animate-slide-up">
+                        Find them among the others in the tray and select them to pack in your luggage.
+                        <div className="mt-2 pt-2 border-t border-pink-200/50 flex justify-between opacity-80">
+                            <span>Time Limit: {settings.gameDuration}s</span>
+                            <span>Max Mistakes: {settings.maxWrongPicks}</span>
+                        </div>
+                        </div>
+                        <div className="flex justify-between delay-300 animate-slide-up">
+                        <button onClick={onExit} className="px-4 py-2 font-bold text-gray-500 hover:text-gray-800">Cancel</button>
+                        <button onClick={startGame} className="px-6 py-3 bg-[#E2136E] text-white font-bold rounded-xl shadow-[0_4px_0_#B60F58] active:translate-y-[1px] active:shadow-[0_2px_0_#B60F58]">Let's Pack</button>
+                        </div>
+                    </div>
+                    </div>
+                )}
+
+                {gameState === 'finished' && (
+                    <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className={`relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-center overflow-hidden border-[5px] ${success ? 'border-green-500 shadow-green-500/20' : 'border-red-500 shadow-red-500/20'}`}>
+                            <div className="absolute inset-0 opacity-10 pointer-events-none filter saturate-[1.2]">
+                                {Scenes[destination.id]}
+                            </div>
+                            <div className="relative z-10">
+                                <h2 className="text-2xl font-black mb-1">{success ? 'Well Done! 🧳' : 'Time Up!'}</h2>
+                                <p className="text-sm font-medium text-gray-600 mb-6">{success ? destination.tone.win : destination.tone.lose}</p>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                        <span className="block text-xs text-gray-400 uppercase font-bold">Time</span>
+                                        <span className="text-xl font-mono font-bold text-gray-800">{(finalTimeMs/1000).toFixed(2)}s</span>
+                                    </div>
+                                    <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                        <span className="block text-xs text-gray-400 uppercase font-bold">Wrong Picks</span>
+                                        <span className="text-xl font-mono font-bold text-gray-800">{wrongs}</span>
+                                    </div>
+                                </div>
+                                {success && (
+                                    <div className="mb-6 p-2 bg-green-50 text-green-700 text-xs font-bold rounded-lg flex items-center justify-center gap-2">
+                                        {isSubmitting ? 'Submitting Score...' : (<><Award size={16} /> Score saved!</>)}
+                                    </div>
+                                )}
+                                <div className="flex gap-3 justify-center">
+                                    <button onClick={() => handlePromoTransition(onExit)} className="px-5 py-3 rounded-xl border-2 border-gray-200 font-bold text-gray-600 hover:bg-gray-50">Home</button>
+                                    <button onClick={() => handlePromoTransition(onExit)} className="px-8 py-3 rounded-xl bg-[#E2136E] text-white font-bold shadow-[0_4px_0_#B60F58] active:translate-y-[1px] active:shadow-[0_2px_0_#B60F58]">Play Again</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {gameState === 'promo' && (
+                    <div className="absolute inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+                    <div className="relative w-full max-w-sm animate-pulse-custom">
+                        <button onClick={() => nextAction && nextAction()} className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full text-gray-800 font-bold shadow-lg flex items-center justify-center z-20 border-2 border-gray-100">✕</button>
+                        <div className="bg-white rounded-xl overflow-hidden shadow-2xl">
+                            <img src="./assets/tt_story.jpg" alt="Story" className="w-full h-auto object-cover"/>
+                        </div>
+                    </div>
+                    </div>
+                )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('landing');
+// 1. Settings state (now includes a listener to update from Firebase)
+            const [settings, setSettings] = useState({
+                secretCode: 'admin',
+                maxWrongPicks: 4,
+                itemsToPack: 5,
+                isLbVisible: true,
+                idleTimeoutEnabled: true,
+                gameDuration: 20,
+                showPromo: true 
+            });
+            const [playerName, setPlayerName] = useState('');
+            const [destination, setDestination] = useState(null);
+            const [showNameModal, setShowNameModal] = useState(false);
+            const [showSettingsModal, setShowSettingsModal] = useState(false);
+            const [leaderboardData, setLeaderboardData] = useState([]);
+            const [stats, setStats] = useState({ lifetimeWins: 0, totalGamesPlayed: 0 });
+
+            // 2. The Updated useEffect for Leaderboard AND Settings Sync
+            useEffect(() => {
+                // Listen for Leaderboard Updates
+                const unsubscribeLB = LeaderboardService.subscribeToLeaderboard((data) => {
+                    setLeaderboardData(data);
+                });
+
+                // Listen for Global Settings Updates from Firebase
+                const settingsRef = database.ref('gameSettings');
+                settingsRef.on('value', (snapshot) => {
+                    const remoteSettings = snapshot.val();
+                    if (remoteSettings) {
+                        setSettings(remoteSettings);
+                    }
+                });
+
+                setStats(LeaderboardService.getStats());
+
+                return () => {
+                    unsubscribeLB();
+                    settingsRef.off(); // Stop listening when app closes
+                };
+            }, []);
+
+            // 3. Save to Firebase whenever settings are changed locally
+            useEffect(() => {
+                database.ref('gameSettings').set(settings);
+            }, [settings]);
+
+
+
+useEffect(() => {
+    const settingsRef = firebase.database().ref('gameSettings');
+    
+    // This listens for any change in the Firebase database
+    settingsRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            setSettings(data); // This updates the UI on all devices instantly
+        }
+    });
+
+    return () => settingsRef.off(); // Cleanup listener when game closes
+}, []);
+
+            const goHome = () => setView('landing');
+            const handlePlayClick = () => { audio.unlock(); setShowNameModal(true); };
+            const handleNameSubmit = (name) => {
+                if (!name.trim()) return;
+                if (name.toLowerCase() === settings.secretCode.toLowerCase()) {
+                    setShowNameModal(false);
+                    setShowSettingsModal(true);
+                } else {
+                    setPlayerName(name);
+                    setShowNameModal(false);
+                    setView('intro');
+                }
+            };
+            const handleDestSelect = (destId) => {
+                const dest = DESTINATIONS.find(d => d.id === destId);
+                if (dest) { setDestination(dest); setView('game'); }
+            };
+            const downloadExcel = () => {
+                if (!leaderboardData.length) { alert("No data to download."); return; }
+                const headers = ['ID,Name,Destination,Time(ms),Date'];
+                const rows = leaderboardData.map(e => `${e.id},"${e.name}",${e.destId},${e.timeMs},"${e.timestamp}"`);
+                const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "packngo_leaderboard_data.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+           return (
+    // CHANGED: h-screen -> h-[100dvh] (Dynamic Viewport Height fixes mobile scroll issues)
+    // CHANGED: Added overflow-hidden to outer container
+    // CHANGED: max-w-md -> w-full sm:max-w-md md:max-w-lg (Better scaling on tablets)
+    <div className="w-full h-[100dvh] flex justify-center bg-[#f3f4f6] overflow-hidden">
+        <div className="w-full sm:max-w-md md:max-w-lg h-full bg-white relative flex flex-col shadow-2xl transition-all duration-300">
+            {view === 'landing' && <LandingView onPlay={handlePlayClick} leaderboardVisible={settings.isLbVisible} leaderboardData={leaderboardData} />}
+
+                        {view === 'intro' && <IntroView playerName={playerName} onSelect={handleDestSelect} onBack={goHome} />}
+                        {view === 'game' && destination && <GameView playerName={playerName} destination={destination} settings={settings} onExit={goHome} onFinish={() => LeaderboardService.getLeaderboard().then(setLeaderboardData)} />}
+
+                        {showNameModal && (
+                        <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-pulse-custom">
+                                <h3 className="text-xl font-black mb-4">Ready to Pack?</h3>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Your Name</label>
+                                <input autoFocus type="text" maxLength={24} className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl font-bold focus:border-[#E2136E] focus:outline-none mb-6" placeholder="Enter your name" id="nameInput" onKeyDown={(e) => { if(e.key === 'Enter') handleNameSubmit(e.target.value); }} />
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={() => setShowNameModal(false)} className="px-4 py-2 rounded-xl text-[#E2136E] font-bold border-2 border-[#E2136E] hover:bg-pink-50">Cancel</button>
+                                    <button onClick={() => { const val = document.getElementById('nameInput').value; handleNameSubmit(val); }} className="px-4 py-2 rounded-xl bg-[#E2136E] text-white font-bold shadow-[0_4px_0_#B60F58] active:translate-y-[1px] active:shadow-[0_2px_0_#B60F58]">Start Packing</button>
+                                </div>
+                            </div>
+                        </div>
+                        )}
+
+                        {showSettingsModal && (
+                        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl max-h-[90vh] overflow-y-auto">
+                                <h3 className="text-xl font-black mb-1">⚙️ Secret Settings</h3>
+                                <p className="text-xs text-gray-500 mb-4">Game Configuration</p>
+                                <div className="space-y-4 text-sm font-bold text-gray-800">
+                                    <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                                        <div className="flex justify-between items-center"><span>Total Games:</span><span className="text-[#E2136E]">{stats.totalGamesPlayed}</span></div>
+                                        <div className="flex justify-between items-center"><span>Wins:</span><span className="text-green-600">{stats.lifetimeWins}</span></div>
+                                    </div>
+                                    <div className="flex items-center justify-between border-b pb-3">
+                                        <span>Show Leaderboard on Home</span>
+                                        <button onClick={() => setSettings(s => ({...s, isLbVisible: !s.isLbVisible}))} className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${settings.isLbVisible ? 'bg-green-500' : 'bg-gray-300'}`}>
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${settings.isLbVisible ? 'translate-x-6' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between border-b pb-3">
+                                        <span>Show Story Banner (End)</span>
+                                        <button onClick={() => setSettings(s => ({...s, showPromo: !s.showPromo}))} className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${settings.showPromo ? 'bg-green-500' : 'bg-gray-300'}`}>
+                                            <div className={`w-4 h-4 bg-white rounded-full transition-transform ${settings.showPromo ? 'translate-x-6' : ''}`} />
+                                        </button>
+                                    </div>
+                                    <button onClick={downloadExcel} className="w-full flex items-center justify-center gap-2 py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 border border-green-300"><Download size={18}/> Download Data (Excel/CSV)</button>
+                                    <div className="flex justify-between items-center">
+                                        <span>Difficulty (Items to Pack):</span>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => setSettings(s => ({...s, itemsToPack: Math.max(5, s.itemsToPack - 1)}))} className="w-8 h-8 bg-gray-200 rounded">-</button>
+                                            <span className="w-4 text-center">{settings.itemsToPack}</span>
+                                            <button onClick={() => setSettings(s => ({...s, itemsToPack: Math.min(7, s.itemsToPack + 1)}))} className="w-8 h-8 bg-gray-200 rounded">+</button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>Game Time (Seconds):</span>
+                                        <input type="number" min={10} max={120} value={settings.gameDuration} onChange={(e) => setSettings({...settings, gameDuration: parseInt(e.target.value) || 20})} className="w-16 p-2 border rounded text-center" />
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>Max Wrong Picks:</span>
+                                        <input type="number" min={1} max={20} value={settings.maxWrongPicks} onChange={(e) => setSettings({...settings, maxWrongPicks: parseInt(e.target.value)})} className="w-16 p-2 border rounded text-center" />
+                                    </div>
+                                    <div className="pt-2 border-t mt-4">
+                                        <label className="block mb-1 text-xs uppercase text-gray-400">Change Admin Code</label>
+                                        <input type="text" placeholder="New code" className="w-full p-2 border rounded" onBlur={(e) => { if(e.target.value.trim()) { localStorage.setItem('packngo_secret', e.target.value.trim()); setSettings({...settings, secretCode: e.target.value.trim()}); } }} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <button onClick={() => { if(confirm('Reset your personal gameplay stats?')) { LeaderboardService.resetStats(); setStats({lifetimeWins:0, totalGamesPlayed:0}); } }} className="w-full flex items-center justify-center gap-2 py-2 border-2 border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 text-xs font-bold"><Trash2 size={14}/> Reset Game Data (Stats)</button>
+                                        <button onClick={() => { if(confirm('Reset ALL leaderboard data? This cannot be undone.')) { LeaderboardService.resetAll().then(() => { setStats({lifetimeWins:0, totalGamesPlayed:0}); setLeaderboardData([]); alert('Data cleared.'); }); } }} className="w-full py-2 border-2 border-red-100 text-red-500 rounded-lg hover:bg-red-50 text-xs">Reset Global Leaderboard</button>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-end">
+                                    <button onClick={() => setShowSettingsModal(false)} className="px-6 py-3 rounded-xl bg-[#E2136E] text-white font-bold shadow-[0_4px_0_#B60F58]">Save & Close</button>
+                                </div>
+                            </div>
+                        </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
